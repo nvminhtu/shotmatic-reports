@@ -6,4 +6,5 @@ Real app-market data, straight from [ShotMatic](https://shotmatic.app) — one s
 ### Nov 23, 2026
 
 - [Top 10 speaker cleaner apps on the App Store: keyword ranks](keyword/2026-11-23-speaker-cleaner-keyword-ranks.md) · Keyword
+- [Colorfy ASO audit: why a 50M-install coloring app scores 69/100](aso/2026-11-23-colorfy-coloring-book-aso-audit.md) · ASO
 <!-- END POSTS -->
