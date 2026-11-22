@@ -9,3 +9,12 @@
   border-radius: 10px;
   box-shadow: 0 1px 8px rgba(0, 0, 0, .14);
 }
+/* Dark mode: navy links/active nav vanish on the dark background — use light blue + coral. */
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: #8FB8FF;
+  --md-accent-fg-color: #F5A27D;
+}
+[data-md-color-scheme="slate"] .md-nav__link--active,
+[data-md-color-scheme="slate"] .md-nav__item .md-nav__link--active {
+  color: #8FB8FF;
+}
