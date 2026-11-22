@@ -63,7 +63,7 @@ Loại tính năng (thư mục) ban đầu: `trend`, `hunt-app`, `keyword`, `aso
 ## watermark.py
 
 - Vào: đường dẫn hình (png/jpg/webp), slug, ngày. Ra: PNG trong `docs/<type>/img/`.
-- Góc dưới phải: favicon ShotMatic + chữ `shotmatic.app`, trên viên nền trắng bo góc mờ ~85%, lề 2% cạnh ngắn. Cao logo ≈ 4% chiều cao hình (tối thiểu 28px, tối đa 64px).
+- Góc dưới phải: favicon ShotMatic + chữ `shotmatic.app`, trên viên nền navy #1F2A44 bo góc ~88% (logo wordmark chữ sáng nên nền tối), lề 2% cạnh ngắn. Cao logo ≈ 4% chiều cao hình (tối thiểu 28px, tối đa 64px).
 - Không thu nhỏ hình gốc; nếu rộng > 2400px thì thu về 2400px (cho X + web nhẹ).
 - Lỗi: file không phải ảnh / không mở được → thoát mã 1 kèm thông báo rõ.
 
