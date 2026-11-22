@@ -9,11 +9,12 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
 ROOT = Path(__file__).resolve().parent.parent
-LOGO = ROOT / "docs" / "images" / "shotmatic-wordmark-light.png"
+LOGO = ROOT / "docs" / "images" / "shotmatic-icon.png"
 MAX_WIDTH = 2400
 BADGE_TEXT = "shotmatic.app"
 BADGE_BG = (31, 42, 68, 224)  # navy #1F2A44 at ~88%
 FONT_CANDIDATES = [
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
     "/System/Library/Fonts/Helvetica.ttc",
     "/System/Library/Fonts/SFNS.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -29,7 +30,7 @@ def image_name(slug: str, date: str) -> str:
 
 
 def badge_height(img_h: int) -> int:
-    return max(28, min(64, round(img_h * 0.04)))
+    return max(40, min(96, round(img_h * 0.07)))
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont:
@@ -44,14 +45,14 @@ def _font(size: int) -> ImageFont.FreeTypeFont:
 
 def make_badge(height: int, logo_path: Path = LOGO) -> Image.Image:
     logo = Image.open(logo_path).convert("RGBA")
-    lh = round(height * 0.62)
+    lh = round(height * 0.72)
     lw = round(logo.width * lh / logo.height)
     logo = logo.resize((lw, lh), Image.LANCZOS)
 
-    font = _font(round(height * 0.42))
+    font = _font(round(height * 0.5))
     left, top, right, bottom = font.getbbox(BADGE_TEXT)
     tw, th = right - left, bottom - top
-    pad, gap = round(height * 0.3), round(height * 0.28)
+    pad, gap = round(height * 0.22), round(height * 0.2)
     width = pad + lw + gap + tw + pad
 
     badge = Image.new("RGBA", (width, height), (0, 0, 0, 0))

@@ -19,7 +19,7 @@ Spec: `plans/2026-11-23-shotmatic-reports-design.md`.
 - Image name: `shotmatic.app-<slug>-<YYYY-MM-DD>.png`, stored in `docs/<type>/img/`.
 - Post path: `docs/<type>/<YYYY-MM-DD>-<slug>.md`; collision → slug gets `-2`, `-3`…
 - Images wider than 2400px are scaled down to 2400px; never upscaled.
-- Badge: in a strip added under the screenshot (strip colour = bottom-left pixel; never covers data), bottom-right, height = 4% of image height clamped to 28–64px, margin = 2% of shorter side (min 8px). **Change vs spec:** the pill is dark navy `#1F2A44` at ~88% opacity (not white), because the only crisp logo file (`shotmatic-wordmark-light.png`, 510×120) has light text.
+- Badge: in a strip added under the screenshot (strip colour = bottom-left pixel; never covers data), bottom-right, height = 7% of image height clamped to 40–96px; icon-only logo (docs/images/shotmatic-icon.png) + bold "shotmatic.app", margin = 2% of shorter side (min 8px). **Change vs spec:** the pill is dark navy `#1F2A44` at ~88% opacity (not white), because the only crisp logo file (`shotmatic-wordmark-light.png`, 510×120) has light text.
 - X caption ≤ 280 chars, each URL counted as 23.
 - Short answer 40–80 words (target 40–60).
 - Numbers only from the screenshot or ShotMatic MCP, with source; missing → "not measured".

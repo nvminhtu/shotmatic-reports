@@ -12,7 +12,7 @@ def test_image_name():
         "shotmatic.app-speaker-cleaner-keyword-ranks-2026-11-23.png"
 
 
-@pytest.mark.parametrize("h,expected", [(300, 28), (1000, 40), (2000, 64), (800, 32)])
+@pytest.mark.parametrize("h,expected", [(300, 40), (1000, 70), (2000, 96), (800, 56)])
 def test_badge_height_clamped(h, expected):
     assert badge_height(h) == expected
 
@@ -27,14 +27,14 @@ def test_watermark_names_file_and_adds_strip(tmp_path: Path):
     out = watermark(src, tmp_path / "out", "speaker-cleaner", "2026-11-23")
     assert out == tmp_path / "out" / "shotmatic.app-speaker-cleaner-2026-11-23.png"
     img = Image.open(out)
-    assert img.size == (1200, 800 + strip(800))  # 800 + 32 + 2*16
+    assert img.size == (1200, 800 + strip(800))  # 800 + 56 + 2*16
     assert img.format == "PNG"
 
 
 def test_badge_in_strip_never_covers_screenshot(tmp_path: Path):
     src = make_png(tmp_path / "in.png", (1200, 800), color=(250, 250, 250))
     img = Image.open(watermark(src, tmp_path, "s", "2026-11-23")).convert("RGB")
-    margin, h = 16, badge_height(800)  # 2% of 800, 32
+    margin, h = 16, badge_height(800)  # 2% of 800, 56
     # the original screenshot area is untouched, even its bottom-right corner
     assert img.getpixel((1199, 799)) == (250, 250, 250)
     assert img.getpixel((5, 5)) == (250, 250, 250)

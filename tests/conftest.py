@@ -14,7 +14,7 @@ def site_root(tmp_path: Path) -> Path:
     """A throwaway copy of the site skeleton the scripts write into."""
     (tmp_path / "docs" / "images").mkdir(parents=True)
     (tmp_path / "scripts").mkdir()
-    shutil.copy(REPO / "docs" / "images" / "shotmatic-wordmark-light.png", tmp_path / "docs" / "images")
+    shutil.copy(REPO / "docs" / "images" / "shotmatic-icon.png", tmp_path / "docs" / "images")
     shutil.copy(REPO / "scripts" / "types.json", tmp_path / "scripts")
     (tmp_path / "mkdocs.yml").write_text(
         "site_name: T\n"

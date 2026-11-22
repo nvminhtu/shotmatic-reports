@@ -93,7 +93,7 @@ def create_post(root: Path, type_: str, date: str, slug: str, title: str,
     slug = _unique_slug(root, type_, date, slugify(slug))
     folder = root / "docs" / type_
     image = watermark(Path(image_src), folder / "img", slug, date,
-                      root / "docs" / "images" / "shotmatic-wordmark-light.png")
+                      root / "docs" / "images" / "shotmatic-icon.png")
     rel_image = f"img/{image.name}"
     fm = {
         "title": title,
