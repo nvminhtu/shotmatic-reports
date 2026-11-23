@@ -6,7 +6,7 @@ import re
 import sys
 from pathlib import Path
 
-from new_post import APPDEMO, FM_KEYS, IMG_URL, LANDING, img_dir, load_types, read_post, reports_dir
+from new_post import APPDEMO, FM_KEYS, STORES, IMG_URL, LANDING, img_dir, load_types, read_post, reports_dir
 from seo_check import seo_errors
 
 URL_RE = re.compile(r"https?://\S+")
@@ -15,6 +15,9 @@ IMAGE_NAME_RE = re.compile(r"^shotmatic\.app-[a-z0-9-]+-\d{4}-\d{2}-\d{2}\.png$"
 SHORT_RE = re.compile(r"^## The short answer\s*\n(.*?)(?=^## |\Z)", re.M | re.S)
 NUMBERS_RE = re.compile(r"^## The numbers in the screenshot\s*\n(.*?)(?=^## |\Z)", re.M | re.S)
 TABLE_SEP_RE = re.compile(r"^\|\s*:?-{3,}", re.M)
+# ShotMatic's internal run ids ("[ASO #45 · 2026-11-21]", "Audit #45", "trending #48") mean nothing to readers:
+# write the feature + store + country + date instead. Ranks such as "#5" or "| #11 |" are fine.
+INTERNAL_ID_RE = re.compile(r"\[[^\]\n]*#\d+[^\]\n]*\]|\b(?:ASO|Audit|Research|research|Trending|trending|Explore|explore|Hunt|hunt|Review|review|Compare|compare)\s+#\d+")
 
 
 def x_length(caption: str) -> int:
@@ -56,6 +59,14 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, ban
             errors.append(f"image name must be {prefix}shotmatic.app-<slug>-<YYYY-MM-DD>.png")
         elif not (img_dir(appdemo, type_) / name).exists():
             errors.append(f"image not found in app-demo: shotmatic/reports/{type_}/{name}")
+
+    if fm.get("store") and fm.get("store") not in STORES:
+        errors.append(f"store must be one of {', '.join(STORES)}")
+    if fm.get("country") and not re.fullmatch(r"[A-Z]{2}", str(fm.get("country"))):
+        errors.append("country must be a 2-letter code like US")
+    ids = sorted({m.group(0) for m in INTERNAL_ID_RE.finditer(f"{fm.get('source', '')}\n{body}")})
+    if ids:
+        errors.append(f"internal ShotMatic ids mean nothing to readers, write feature + store + country + date instead: {', '.join(ids)}")
 
     if "WRITE:" in body:
         errors.append("unfilled WRITE: placeholder left in the post")

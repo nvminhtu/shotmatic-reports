@@ -25,7 +25,8 @@ LANDING = Path(os.environ.get("REPORTS_LANDING",
 APPDEMO = Path(os.environ.get("REPORTS_APPDEMO", "/Users/tucarmd/DATA/PROJECTS/OTHERS/app-demo"))
 IMG_URL = "https://nvminhtu.github.io/app-demo/shotmatic/reports"
 SITE_URL = "https://shotmatic.app/reports"
-FM_KEYS = ["title", "description", "date", "type", "keyword", "seo_keyword", "target_keywords", "aso_keywords",
+STORES = ("app-store", "google-play")
+FM_KEYS = ["title", "description", "date", "type", "store", "country", "keyword", "seo_keyword", "target_keywords", "aso_keywords",
            "short", "image", "source", "x_caption"]
 
 BODY = """# {title}
@@ -117,7 +118,8 @@ def _unique_slug(folder: Path, slug: str) -> str:
 
 def create_post(type_: str, date: str, slug: str, title: str, keyword: str, source: str,
                 image_src: Path, landing: Path = LANDING, appdemo: Path = APPDEMO,
-                seo_keyword: str = "", targets: list[str] | None = None, links: dict[str, str] | None = None) -> dict:
+                seo_keyword: str = "", targets: list[str] | None = None, links: dict[str, str] | None = None,
+                store: str = "", country: str = "") -> dict:
     """targets: 1–3 shotmatic.app keywords from keywords/bank.csv; links: keyword → page (defaults to the bank)."""
     if type_ not in load_types(landing):
         raise ValueError(f"unknown type {type_!r}; add it to content/reports/types.json in the landing")
@@ -143,6 +145,8 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
         "description": "",
         "date": date,
         "type": type_,
+        "store": store,
+        "country": country.upper(),
         "keyword": keyword,
         "seo_keyword": seo_keyword,
         "target_keywords": targets,
@@ -168,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--title", required=True)
     c.add_argument("--keyword", required=True)
     c.add_argument("--source", required=True)
+    c.add_argument("--store", required=True, choices=STORES, help="store the numbers come from (site filter)")
+    c.add_argument("--country", required=True, help="2-letter country of the numbers, e.g. US (site filter)")
     c.add_argument("--image", type=Path, required=True)
     c.add_argument("--date", default=dt.date.today().isoformat())
     c.add_argument("--seo-keyword", default="", help="the search phrase this report should rank for")
@@ -175,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     try:
         r = create_post(a.type, a.date, a.slug, a.title, a.keyword, a.source, a.image,
-                        seo_keyword=a.seo_keyword, targets=a.target)
+                        seo_keyword=a.seo_keyword, targets=a.target, store=a.store, country=a.country)
         print(json.dumps(r, indent=2))
     except (ValueError, WatermarkError) as e:
         print(f"error: {e}", file=sys.stderr)

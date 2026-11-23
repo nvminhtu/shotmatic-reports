@@ -27,7 +27,7 @@ def _create(site, slug="speaker-cleaner-app-keywords"):
     return Path(create_post("keyword", "2026-11-23", slug, "Speaker cleaner app keywords ranked for 2026", "speaker cleaner",
                             "ShotMatic Keyword ranks, US App Store, measured 2026-11-23", src, landing, appdemo,
                             seo_keyword="speaker cleaner app keywords", targets=["aso keyword ranking"],
-                            links={r["keyword"]: r["link"] for r in BANK})["post"])
+                            links={r["keyword"]: r["link"] for r in BANK}, store="app-store", country="us")["post"])
 
 
 def _filled(site) -> Path:
@@ -148,3 +148,21 @@ def test_seo_keyword_owned_by_blog_post_fails(site):
     blog.mkdir(parents=True)
     (blog / "x.md").write_text("---\nkeyword: speaker cleaner app keywords\n---\nbody")
     assert any("already owned by x.md" in e for e in check(post, *site))
+
+
+def test_internal_ids_fail_but_ranks_pass(site):
+    post = _filled(site)
+    t = post.read_text()
+    assert check(post, *site) == []  # the filled post has ranks like #1, which are fine
+    post.write_text(t.replace("## How this was measured", "Source: [ASO #45 · 2026-11-21].\n\n## How this was measured"))
+    assert any("[ASO #45 · 2026-11-21]" in e for e in check(post, *site))
+    post.write_text(t.replace("## How this was measured", "From trending #48.\n\n## How this was measured"))
+    assert any("trending #48" in e for e in check(post, *site))
+
+
+def test_store_and_country_required(site):
+    post = _filled(site)
+    fm, _ = read_post(post)
+    assert fm["store"] == "app-store" and fm["country"] == "US"
+    post.write_text(post.read_text().replace("store: app-store", "store: play"))
+    assert any("store must be" in e for e in check(post, *site))
