@@ -25,7 +25,8 @@ LANDING = Path(os.environ.get("REPORTS_LANDING",
 APPDEMO = Path(os.environ.get("REPORTS_APPDEMO", "/Users/tucarmd/DATA/PROJECTS/OTHERS/app-demo"))
 IMG_URL = "https://nvminhtu.github.io/app-demo/shotmatic/reports"
 SITE_URL = "https://shotmatic.app/reports"
-FM_KEYS = ["title", "date", "type", "keyword", "short", "image", "source", "x_caption"]
+FM_KEYS = ["title", "description", "date", "type", "keyword", "seo_keyword", "target_keywords", "aso_keywords",
+           "short", "image", "source", "x_caption"]
 
 BODY = """# {title}
 
@@ -48,6 +49,16 @@ WRITE: 40–60 words about the long-tail keyword niche "{keyword}" (not about on
 ## What this means if you build in this niche
 
 WRITE: 2–3 sentences of advice for an indie app maker.
+
+## ASO keywords for this niche
+
+| Keyword | Where to use it | Why (number from the data) |
+|---|---|---|
+| WRITE: one row per aso_keyword (title, subtitle, keyword field or description) | | |
+
+## Go deeper on shotmatic.app
+
+{deeper}
 
 ## How this was measured
 
@@ -105,7 +116,9 @@ def _unique_slug(folder: Path, slug: str) -> str:
 
 
 def create_post(type_: str, date: str, slug: str, title: str, keyword: str, source: str,
-                image_src: Path, landing: Path = LANDING, appdemo: Path = APPDEMO) -> dict:
+                image_src: Path, landing: Path = LANDING, appdemo: Path = APPDEMO,
+                seo_keyword: str = "", targets: list[str] | None = None, links: dict[str, str] | None = None) -> dict:
+    """targets: 1–3 shotmatic.app keywords from keywords/bank.csv; links: keyword → page (defaults to the bank)."""
     if type_ not in load_types(landing):
         raise ValueError(f"unknown type {type_!r}; add it to content/reports/types.json in the landing")
     try:
@@ -116,11 +129,24 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
     slug = _unique_slug(folder, slugify(slug))
     image = watermark(Path(image_src), img_dir(appdemo, type_), slug, date)
     image_url = f"{IMG_URL}/{type_}/{image.name}"
+    targets = targets or []
+    if links is None:
+        from seo_keywords import load_bank
+        links = {r["keyword"]: r["link"] for r in load_bank()}
+    unknown = [t for t in targets if t.lower() not in links]
+    if unknown:
+        raise ValueError(f"not in keywords/bank.csv: {', '.join(unknown)} (see scripts/seo_keywords.py suggest)")
+    deeper = "\n".join(f"- [{t}]({links[t.lower()]}): WRITE: one line on why this helps someone in this niche" for t in targets) \
+        or "- WRITE: one link per target keyword"
     fm = {
         "title": title,
+        "description": "",
         "date": date,
         "type": type_,
         "keyword": keyword,
+        "seo_keyword": seo_keyword,
+        "target_keywords": targets,
+        "aso_keywords": [],
         "short": slug.replace("-", " ").capitalize(),
         "image": image_url,
         "source": source,
@@ -128,7 +154,7 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
     }
     folder.mkdir(parents=True, exist_ok=True)
     post = folder / f"{date}-{slug}.md"
-    write_post(post, fm, BODY.format(title=title, keyword=keyword, image=image_url, source=source.rstrip(".")))
+    write_post(post, fm, BODY.format(title=title, keyword=keyword, image=image_url, source=source.rstrip("."), deeper=deeper))
     return {"slug": slug, "post": str(post), "image": str(image), "image_url": image_url,
             "url": f"{SITE_URL}/{type_}/{slug}"}
 
@@ -144,9 +170,12 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--source", required=True)
     c.add_argument("--image", type=Path, required=True)
     c.add_argument("--date", default=dt.date.today().isoformat())
+    c.add_argument("--seo-keyword", default="", help="the search phrase this report should rank for")
+    c.add_argument("--target", action="append", default=[], help="shotmatic.app keyword from keywords/bank.csv (1–3)")
     a = ap.parse_args(argv)
     try:
-        r = create_post(a.type, a.date, a.slug, a.title, a.keyword, a.source, a.image)
+        r = create_post(a.type, a.date, a.slug, a.title, a.keyword, a.source, a.image,
+                        seo_keyword=a.seo_keyword, targets=a.target)
         print(json.dumps(r, indent=2))
     except (ValueError, WatermarkError) as e:
         print(f"error: {e}", file=sys.stderr)

@@ -27,7 +27,9 @@ def _new(site, slug="speaker-cleaner-app-keywords", date="2026-11-23", type_="ke
     landing, appdemo = site
     src = make_png(landing.parent / f"shot-{slug}-{date.replace('/', '-')}.png")
     return create_post(type_, date, slug, title, "speaker cleaner",
-                       "ShotMatic Keyword ranks, US App Store, measured 2026-11-23", src, landing, appdemo)
+                       "ShotMatic Keyword ranks, US App Store, measured 2026-11-23", src, landing, appdemo,
+                       seo_keyword="speaker cleaner app keywords", targets=["aso keyword ranking"],
+                       links={"aso keyword ranking": "/app-store-keyword-research"})
 
 
 def test_create_post_writes_post_to_landing_and_image_to_appdemo(site):
@@ -40,11 +42,14 @@ def test_create_post_writes_post_to_landing_and_image_to_appdemo(site):
     assert r["image_url"] == f"{URL}/keyword/{name}"
     assert r["url"] == "https://shotmatic.app/reports/keyword/speaker-cleaner-app-keywords"
     fm, body = read_post(post)
-    assert list(fm) == ["title", "date", "type", "keyword", "short", "image", "source", "x_caption"]
+    assert list(fm) == ["title", "description", "date", "type", "keyword", "seo_keyword", "target_keywords",
+                        "aso_keywords", "short", "image", "source", "x_caption"]
+    assert fm["seo_keyword"] == "speaker cleaner app keywords" and fm["target_keywords"] == ["aso keyword ranking"]
     assert fm["date"] == "2026-11-23" and fm["image"] == r["image_url"] and fm["x_caption"] == ""
     assert fm["short"] == "Speaker cleaner app keywords"
     for h in ["## The short answer", "## The numbers in the screenshot", "## What the data shows",
-              "## What this means if you build in this niche", "## How this was measured"]:
+              "## What this means if you build in this niche", "## ASO keywords for this niche",
+              "## Go deeper on shotmatic.app", "## How this was measured"]:
         assert h in body
     assert f"]({r['image_url']})" in body and "WRITE:" in body
 
@@ -74,3 +79,16 @@ def test_bad_date_rejected(site):
 def test_titles_with_quotes_survive_yaml(site):
     r = _new(site, slug="q", title='Top 10 "speaker cleaner" apps: ranks')
     assert read_post(Path(r["post"]))[0]["title"] == 'Top 10 "speaker cleaner" apps: ranks'
+
+
+def test_go_deeper_prefilled_with_target_links(site):
+    body = read_post(Path(_new(site)["post"]))[1]
+    assert "- [aso keyword ranking](/app-store-keyword-research): WRITE:" in body
+
+
+def test_unknown_target_rejected(site):
+    landing, appdemo = site
+    src = make_png(landing.parent / "x.png")
+    with pytest.raises(ValueError, match="not in keywords/bank.csv"):
+        create_post("keyword", "2026-11-23", "s", "T", "k", "src", src, landing, appdemo,
+                    targets=["made up phrase"], links={})

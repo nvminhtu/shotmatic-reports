@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from new_post import APPDEMO, FM_KEYS, IMG_URL, LANDING, img_dir, load_types, read_post, reports_dir
+from seo_check import seo_errors
 
 URL_RE = re.compile(r"https?://\S+")
 POST_NAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-[a-z0-9-]+\.md$")
@@ -26,13 +27,14 @@ def short_answer(body: str) -> str | None:
     return m.group(1).strip().split("\n\n")[0] if m else None
 
 
-def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO) -> list[str]:
+def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, bank: list[dict] | None = None) -> list[str]:
     try:
         fm, body = read_post(path)
     except Exception as e:  # malformed YAML or no frontmatter
         return [f"cannot read frontmatter: {e}"]
 
-    errors = [f"missing or empty frontmatter: {k}" for k in FM_KEYS if not str(fm.get(k, "")).strip()]
+    errors = [f"missing or empty frontmatter: {k}" for k in FM_KEYS
+              if k not in ("target_keywords", "aso_keywords") and not str(fm.get(k, "")).strip()]
 
     type_ = fm.get("type")
     if type_ not in load_types(landing):
@@ -74,6 +76,8 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO) -> 
 
     if "## How this was measured" not in body:
         errors.append("missing '## How this was measured' section")
+
+    errors += seo_errors(path, fm, body, landing, bank)
 
     caption = str(fm.get("x_caption", ""))
     if caption and x_length(caption) > 280:

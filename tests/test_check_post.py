@@ -9,13 +9,25 @@ GOOD_SHORT = ("Speaker cleaner is a crowded App Store keyword: the top 10 is alm
               "speaker cleaner, cleaner volume and cleaner volume booster. A new app needs a "
               "different icon and a narrower long-tail keyword to stand out here.")
 TABLE = "| Keyword | Rank |\n|---|---|\n| speaker cleaner | #1 |"
+BANK = [{"keyword": "aso keyword ranking", "link": "/app-store-keyword-research", "cluster": "C · ASO / store keywords",
+         "fit": "Core", "autocomplete_pos": "1", "topic": "t", "source": "s"}]
+DESC = ("Speaker cleaner app keywords on the US App Store: 4 of 8 long-tail searches are winnable, 3 belong to other "
+        "niches. Ranks and what they mean.")
+ASO_TABLE = ("| Keyword | Where to use it | Why |\n|---|---|---|\n| speaker cleaner | title | #1 |\n"
+             "| cleaner volume | subtitle | #2 |\n| water eject | keyword field | not measured |")
+
+
+def check(post, landing, appdemo):
+    return check_post(post, landing, appdemo, BANK)
 
 
 def _create(site, slug="speaker-cleaner-app-keywords"):
     landing, appdemo = site
     src = make_png(landing.parent / "shot.png")
-    return Path(create_post("keyword", "2026-11-23", slug, "Speaker cleaner apps", "speaker cleaner",
-                            "ShotMatic Keyword ranks, US App Store, measured 2026-11-23", src, landing, appdemo)["post"])
+    return Path(create_post("keyword", "2026-11-23", slug, "Speaker cleaner app keywords ranked for 2026", "speaker cleaner",
+                            "ShotMatic Keyword ranks, US App Store, measured 2026-11-23", src, landing, appdemo,
+                            seo_keyword="speaker cleaner app keywords", targets=["aso keyword ranking"],
+                            links={r["keyword"]: r["link"] for r in BANK})["post"])
 
 
 def _filled(site) -> Path:
@@ -25,7 +37,12 @@ def _filled(site) -> Path:
     t = t.replace(t.split("## The short answer\n\n")[1].split("\n")[0], GOOD_SHORT)
     t = t.replace(t.split("## The numbers in the screenshot\n\n")[1].split("\n\n")[0], TABLE)
     t = t.replace("- WRITE: 3–5 bullets about the keyword niche, each with a number and where it comes from.", "- 5 of 10 icons are blue.")
-    t = t.replace("WRITE: 2–3 sentences of advice for an indie app maker.", "Pick a narrower keyword.")
+    t = t.replace("WRITE: 2–3 sentences of advice for an indie app maker.",
+                  "Pick a narrower keyword; an aso keyword ranking check shows where you stand.")
+    t = t.replace("description: ''", f"description: '{DESC}'")
+    t = t.replace("aso_keywords: []", "aso_keywords:\n- speaker cleaner\n- cleaner volume\n- water eject")
+    t = t.replace(t.split("## ASO keywords for this niche\n\n")[1].split("\n\n## ")[0], ASO_TABLE)
+    t = t.replace("WRITE: one line on why this helps someone in this niche", "see every keyword rank in one place")
     post.write_text(t)
     return post
 
@@ -39,11 +56,11 @@ def test_short_answer_extracts_section():
 
 
 def test_filled_post_passes(site):
-    assert check_post(_filled(site), *site) == []
+    assert check(_filled(site), *site) == []
 
 
 def test_skeleton_fails_with_reasons(site):
-    errors = check_post(_create(site, "s"), *site)
+    errors = check(_create(site, "s"), *site)
     assert any("WRITE:" in e for e in errors)
     assert any("x_caption" in e for e in errors)
     assert any("short answer" in e for e in errors)
@@ -53,32 +70,32 @@ def test_long_caption_fails(site):
     post = _filled(site)
     fm, _ = read_post(post)
     post.write_text(post.read_text().replace(fm["x_caption"], "x" * 281))
-    assert any("280" in e for e in check_post(post, *site))
+    assert any("280" in e for e in check(post, *site))
 
 
 def test_image_missing_in_appdemo_fails(site):
     post = _filled(site)
     for p in (site[1] / "shotmatic/reports/keyword").glob("*.png"):
         p.unlink()
-    assert any("image not found in app-demo" in e for e in check_post(post, *site))
+    assert any("image not found in app-demo" in e for e in check(post, *site))
 
 
 def test_image_not_on_appdemo_url_fails(site):
     post = _filled(site)
     post.write_text(post.read_text().replace("https://nvminhtu.github.io/app-demo/", "https://example.com/"))
-    assert any("image name must be" in e for e in check_post(post, *site))
+    assert any("image name must be" in e for e in check(post, *site))
 
 
 def test_numbers_section_needs_table(site):
     post = _filled(site)
     post.write_text(post.read_text().replace(TABLE, "Just words."))
-    assert any("needs a Markdown table" in e for e in check_post(post, *site))
+    assert any("needs a Markdown table" in e for e in check(post, *site))
 
 
 def test_missing_numbers_section_fails(site):
     post = _filled(site)
     post.write_text(post.read_text().replace("## The numbers in the screenshot", "## Numbers"))
-    assert any("The numbers in the screenshot" in e for e in check_post(post, *site))
+    assert any("The numbers in the screenshot" in e for e in check(post, *site))
 
 
 def test_wrong_folder_and_date_fail(site):
@@ -86,7 +103,7 @@ def test_wrong_folder_and_date_fail(site):
     moved = site[0] / "content/reports/trend/2026-11-22-speaker-cleaner-app-keywords.md"
     moved.parent.mkdir(parents=True, exist_ok=True)
     moved.write_text(post.read_text())
-    errors = check_post(moved, *site)
+    errors = check(moved, *site)
     assert any("folder" in e for e in errors)
     assert any("date" in e for e in errors)
 
@@ -94,4 +111,40 @@ def test_wrong_folder_and_date_fail(site):
 def test_missing_measured_section_fails(site):
     post = _filled(site)
     post.write_text(post.read_text().replace("## How this was measured", "## Notes"))
-    assert any("How this was measured" in e for e in check_post(post, *site))
+    assert any("How this was measured" in e for e in check(post, *site))
+
+
+def _edit(post, old, new):
+    post.write_text(post.read_text().replace(old, new))
+
+
+def test_title_without_seo_keyword_fails(site):
+    post = _filled(site)
+    _edit(post, "title: Speaker cleaner app keywords ranked for 2026", "title: Some other title")
+    assert any("title must contain" in e for e in check(post, *site))
+
+
+def test_short_description_fails(site):
+    post = _filled(site)
+    _edit(post, DESC, "Speaker cleaner app keywords.")
+    assert any("description is" in e for e in check(post, *site))
+
+
+def test_target_link_required(site):
+    post = _filled(site)
+    _edit(post, "](/app-store-keyword-research)", "](/somewhere)")
+    assert any("needs a link to /app-store-keyword-research" in e for e in check(post, *site))
+
+
+def test_aso_keyword_missing_from_section_fails(site):
+    post = _filled(site)
+    _edit(post, "| water eject | keyword field | not measured |", "")
+    assert any("missing: water eject" in e for e in check(post, *site))
+
+
+def test_seo_keyword_owned_by_blog_post_fails(site):
+    post = _filled(site)
+    blog = site[0] / "content" / "blog"
+    blog.mkdir(parents=True)
+    (blog / "x.md").write_text("---\nkeyword: speaker cleaner app keywords\n---\nbody")
+    assert any("already owned by x.md" in e for e in check(post, *site))
