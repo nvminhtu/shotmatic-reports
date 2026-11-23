@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Lint report posts before they are pushed."""
+"""Lint reports (content/reports in the landing) before they are pushed."""
 from __future__ import annotations
 
 import re
 import sys
 from pathlib import Path
 
-from new_post import FM_KEYS, load_types, read_post
+from new_post import APPDEMO, FM_KEYS, IMG_URL, LANDING, img_dir, load_types, read_post, reports_dir
 
-ROOT = Path(__file__).resolve().parent.parent
 URL_RE = re.compile(r"https?://\S+")
 POST_NAME_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})-[a-z0-9-]+\.md$")
-IMAGE_RE = re.compile(r"^img/shotmatic\.app-[a-z0-9-]+-\d{4}-\d{2}-\d{2}\.png$")
+IMAGE_NAME_RE = re.compile(r"^shotmatic\.app-[a-z0-9-]+-\d{4}-\d{2}-\d{2}\.png$")
 SHORT_RE = re.compile(r"^## The short answer\s*\n(.*?)(?=^## |\Z)", re.M | re.S)
+NUMBERS_RE = re.compile(r"^## The numbers in the screenshot\s*\n(.*?)(?=^## |\Z)", re.M | re.S)
+TABLE_SEP_RE = re.compile(r"^\|\s*:?-{3,}", re.M)
 
 
 def x_length(caption: str) -> int:
@@ -20,11 +21,12 @@ def x_length(caption: str) -> int:
 
 
 def short_answer(body: str) -> str | None:
+    """First paragraph of the short-answer section (the screenshot line after it is not counted)."""
     m = SHORT_RE.search(body)
-    return m.group(1) if m else None
+    return m.group(1).strip().split("\n\n")[0] if m else None
 
 
-def check_post(path: Path, root: Path = ROOT) -> list[str]:
+def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO) -> list[str]:
     try:
         fm, body = read_post(path)
     except Exception as e:  # malformed YAML or no frontmatter
@@ -33,10 +35,10 @@ def check_post(path: Path, root: Path = ROOT) -> list[str]:
     errors = [f"missing or empty frontmatter: {k}" for k in FM_KEYS if not str(fm.get(k, "")).strip()]
 
     type_ = fm.get("type")
-    if type_ not in load_types(root):
-        errors.append(f"type {type_!r} is not in scripts/types.json")
-    elif path.parent.resolve() != (root / "docs" / type_).resolve():
-        errors.append(f"post must live in folder docs/{type_}/")
+    if type_ not in load_types(landing):
+        errors.append(f"type {type_!r} is not in content/reports/types.json")
+    elif path.parent.resolve() != (reports_dir(landing) / type_).resolve():
+        errors.append(f"post must live in folder content/reports/{type_}/")
 
     m = POST_NAME_RE.match(path.name)
     if not m:
@@ -46,10 +48,12 @@ def check_post(path: Path, root: Path = ROOT) -> list[str]:
 
     image = str(fm.get("image", ""))
     if image:
-        if not IMAGE_RE.match(image):
-            errors.append("image name must be img/shotmatic.app-<slug>-<YYYY-MM-DD>.png")
-        if not (path.parent / image).exists():
-            errors.append(f"image not found: {image}")
+        prefix = f"{IMG_URL}/{type_}/"
+        name = image[len(prefix):] if image.startswith(prefix) else ""
+        if not IMAGE_NAME_RE.match(name):
+            errors.append(f"image name must be {prefix}shotmatic.app-<slug>-<YYYY-MM-DD>.png")
+        elif not (img_dir(appdemo, type_) / name).exists():
+            errors.append(f"image not found in app-demo: shotmatic/reports/{type_}/{name}")
 
     if "WRITE:" in body:
         errors.append("unfilled WRITE: placeholder left in the post")
@@ -62,6 +66,12 @@ def check_post(path: Path, root: Path = ROOT) -> list[str]:
         if not 40 <= n <= 80:
             errors.append(f"short answer is {n} words; keep it 40–80 (target 40–60)")
 
+    nm = NUMBERS_RE.search(body)
+    if nm is None:
+        errors.append("missing '## The numbers in the screenshot' section")
+    elif not TABLE_SEP_RE.search(nm.group(1)):
+        errors.append("'## The numbers in the screenshot' needs a Markdown table")
+
     if "## How this was measured" not in body:
         errors.append("missing '## How this was measured' section")
 
@@ -71,10 +81,10 @@ def check_post(path: Path, root: Path = ROOT) -> list[str]:
     return errors
 
 
-def all_posts(root: Path = ROOT) -> list[Path]:
+def all_posts(landing: Path = LANDING) -> list[Path]:
     posts = []
-    for type_ in load_types(root):
-        posts += [p for p in sorted((root / "docs" / type_).glob("*.md")) if p.name != "index.md"]
+    for type_ in load_types(landing):
+        posts += sorted((reports_dir(landing) / type_).glob("*.md"))
     return posts
 
 

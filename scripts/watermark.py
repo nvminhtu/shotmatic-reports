@@ -9,7 +9,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
 ROOT = Path(__file__).resolve().parent.parent
-LOGO = ROOT / "docs" / "images" / "shotmatic-icon.png"
+LOGO = ROOT / "assets" / "shotmatic-icon.png"
 MAX_WIDTH = 2400
 BADGE_TEXT = "shotmatic.app"
 BADGE_BG = (31, 42, 68, 224)  # navy #1F2A44 at ~88%

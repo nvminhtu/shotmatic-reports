@@ -1,10 +1,13 @@
-# ShotMatic Reports
+# ShotMatic Reports — tool
 
-One ShotMatic screenshot → one dated, sourced report page + an X caption.
+One ShotMatic screenshot → one dated, sourced report on **https://shotmatic.app/reports** + an X caption.
 
-- Site: MkDocs Material, deployed to GitHub Pages by `.github/workflows/pages.yml`.
 - Run it from Claude: `/shotmatic-report` (skill at `~/.claude/skills/shotmatic-report/`).
-- Spec: `plans/2026-11-23-shotmatic-reports-design.md` · Plan: `plans/2026-11-23-shotmatic-reports-plan.md`.
+- Posts are written into the landing worktree `Master-List-Dashboard/shotmatic-reports-section`
+  (`content/reports/<type>/<date>-<slug>.md`, pages in `pages/reports/`), images into
+  `app-demo/shotmatic/reports/<type>/` (served by GitHub Pages). Override with `REPORTS_LANDING` / `REPORTS_APPDEMO`.
+- `redirects/` is the old `nvminhtu.github.io/shotmatic-reports` site, now only redirects to shotmatic.app.
+- Spec + plan (first version, MkDocs on GitHub Pages): `plans/`.
 
 ## By hand
 
@@ -12,6 +15,5 @@ One ShotMatic screenshot → one dated, sourced report page + an X caption.
     .venv/bin/python scripts/new_post.py create --type keyword --slug my-slug --title "…" --keyword "…" --source "…" --image shot.png
     # fill every WRITE: line + x_caption in the new post
     .venv/bin/python scripts/check_post.py
-    .venv/bin/mkdocs serve
 
-Tests: `.venv/bin/pytest -q`.
+Tests: `.venv/bin/pytest -q` (`scripts/types.json` is the test copy of the landing's `content/reports/types.json`).
