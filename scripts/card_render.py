@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import ssl
+import subprocess
 import sys
 import urllib.request
 from pathlib import Path
@@ -23,6 +25,21 @@ def _col_w(c: str) -> int:
     return REV_W if c in ("revenue", "verified", "earned") else COL_W
 
 
+def _download(url: str) -> bytes:
+    """Python.org builds on macOS ship without CA certs: use certifi, else curl."""
+    try:
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        ctx = None
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "shotmatic-report"})
+        return urllib.request.urlopen(req, timeout=10, context=ctx).read()
+    except Exception:
+        return subprocess.run(["curl", "-sfL", "--max-time", "10", "-A", "shotmatic-report", url],
+                              capture_output=True, check=True).stdout
+
+
 def fetch_icon(src: str | None, icon_dir: Path) -> Image.Image | None:
     if not src:
         return None
@@ -31,8 +48,7 @@ def fetch_icon(src: str | None, icon_dir: Path) -> Image.Image | None:
             icon_dir.mkdir(parents=True, exist_ok=True)
             cached = icon_dir / (hashlib.sha1(src.encode()).hexdigest()[:16] + ".img")
             if not cached.exists():
-                req = urllib.request.Request(src, headers={"User-Agent": "shotmatic-report"})
-                cached.write_bytes(urllib.request.urlopen(req, timeout=10).read())
+                cached.write_bytes(_download(src))
             src = str(cached)
         return Image.open(src).convert("RGBA").resize((ICON, ICON), Image.LANCZOS)
     except Exception:
