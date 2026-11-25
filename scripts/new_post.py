@@ -35,13 +35,17 @@ BODY = """# {title}
 
 WRITE: 40–60 words about the long-tail keyword niche "{keyword}" (not about one app), with 1–2 numbers from the screenshot.
 
-![{keyword} — ShotMatic report]({image})
+![WRITE: alt text, what the screenshot shows in words (≤ 125 chars, with the niche keyword)]({image})
 
 ## The numbers in the screenshot
 
 | WRITE: column | Column |
 |---|---|
 | WRITE: one row for every number on the screenshot (keyword, rank, score…) | |
+
+## Is anyone searching for this?
+
+WRITE: 1–3 sentences on demand, each with a number + source: Google / store autocomplete position, Google Trends 12-month direction (google-trends MCP), ShotMatic demand score. Write "not measured" only for a signal you tried and could not get.
 
 ## What the data shows
 
