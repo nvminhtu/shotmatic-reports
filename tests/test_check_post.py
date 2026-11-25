@@ -36,11 +36,16 @@ def _filled(site) -> Path:
     t = t.replace("x_caption: ''", "x_caption: Speaker cleaner apps look the same. https://example.com/x")
     t = t.replace(t.split("## The short answer\n\n")[1].split("\n")[0], GOOD_SHORT)
     t = t.replace(t.split("## The numbers in the screenshot\n\n")[1].split("\n\n")[0], TABLE)
+    t = t.replace("WRITE: alt text, what the screenshot shows in words (≤ 125 chars, with the niche keyword)",
+                  "ShotMatic keyword ranks for speaker cleaner apps on the US App Store")
+    t = t.replace(t.split("## Is anyone searching for this?\n\n")[1].split("\n\n")[0],
+                  "\"speaker cleaner\" is the #1 App Store autocomplete suggestion for \"speaker\".")
     t = t.replace("- WRITE: 3–5 bullets about the keyword niche, each with a number and where it comes from.", "- 5 of 10 icons are blue.")
     t = t.replace("WRITE: 2–3 sentences of advice for an indie app maker.",
                   "Pick a narrower keyword; an aso keyword ranking check shows where you stand.")
     t = t.replace("description: ''", f"description: '{DESC}'")
     t = t.replace("aso_keywords: []", "aso_keywords:\n- speaker cleaner\n- cleaner volume\n- water eject")
+    t = t.replace("  stat: ''\n  text: ''", "  stat: '#1'\n  text: 'A speaker cleaner app holds #1 for \"speaker cleaner\" but misses the top 50 for \"volume\".'")
     t = t.replace(t.split("## ASO keywords for this niche\n\n")[1].split("\n\n## ")[0], ASO_TABLE)
     t = t.replace("WRITE: one line on why this helps someone in this niche", "see every keyword rank in one place")
     post.write_text(t)
@@ -166,3 +171,72 @@ def test_store_and_country_required(site):
     assert fm["store"] == "app-store" and fm["country"] == "US"
     post.write_text(post.read_text().replace("store: app-store", "store: play"))
     assert any("store must be" in e for e in check(post, *site))
+
+
+def _strict(post: Path) -> Path:
+    """Move a filled post to a date where the 2026-11-24 rules apply."""
+    new = post.with_name(post.name.replace("2026-11-23", "2026-11-25"))
+    new.write_text(post.read_text().replace("date: '2026-11-23'", "date: '2026-11-25'"))
+    post.unlink()
+    return new
+
+
+def test_strict_post_needs_demand_section(site):
+    post = _strict(_filled(site))
+    t = post.read_text()
+    start = t.index("## Is anyone searching for this?")
+    post.write_text(t[:start] + t[t.index("## What the data shows"):])
+    assert any("Is anyone searching" in e for e in check(post, *site))
+
+
+def test_strict_post_rejects_junk_keywords(site):
+    post = _strict(_filled(site))
+    t = post.read_text()
+    assert check(post, *site) == []
+    post.write_text(t.replace("| speaker cleaner | #1 |", "| speaker cleaner | #1 |\n| r money | #8 |"))
+    assert any("junk store keywords" in e and "r money" in e for e in check(post, *site))
+
+
+def test_junk_keywords_keeps_real_phrases():
+    from check_post import junk_keywords
+    body = "| Keyword | Rank |\n|---|---|\n| budget tracker | #7 |\n| m money x lao | #12 |\n| a budget app | #3 |"
+    assert junk_keywords(body) == ["m money x lao"]
+
+
+def test_strict_post_needs_real_alt(site):
+    post = _strict(_filled(site))
+    t = post.read_text()
+    post.write_text(t.replace("ShotMatic keyword ranks for speaker cleaner apps on the US App Store", "speaker cleaner — ShotMatic report"))
+    assert any("alt text" in e for e in check(post, *site))
+
+
+def test_updated_must_follow_date(site):
+    post = _filled(site)
+    t = post.read_text()
+    post.write_text(t.replace("date: '2026-11-23'", "date: '2026-11-23'\nupdated: '2026-11-30'"))
+    assert check(post, *site) == []
+    post.write_text(t.replace("date: '2026-11-23'", "date: '2026-11-23'\nupdated: '2026-11-01'"))
+    assert any("updated must be on or after" in e for e in check(post, *site))
+
+
+def test_highlight_required(site):
+    post = _filled(site)
+    assert check_post(post, *site, bank=BANK) == []
+    post.write_text(post.read_text().replace("  stat: '#1'", "  stat: ''"))
+    assert any("highlight" in e for e in check_post(post, *site, bank=BANK))
+
+
+def test_highlight_stat_needs_a_number(site):
+    post = _filled(site)
+    post.write_text(post.read_text().replace("  stat: '#1'", "  stat: 'big'"))
+    assert any("highlight.stat" in e for e in check_post(post, *site, bank=BANK))
+
+
+def test_chart_blocks_checked(site):
+    from check_post import chart_errors
+    ok = "```chart\ntype: change\nitems:\n  - { label: g, from: 1, to: 2 }\nsource: Trends\n```"
+    assert chart_errors(ok) == []
+    assert any("type must be" in e for e in chart_errors("```chart\ntype: pie\nsource: x\n```"))
+    assert any("needs label, from, to" in e for e in chart_errors("```chart\ntype: change\nitems:\n  - { label: g }\nsource: x\n```"))
+    assert any("needs 2 values" in e for e in chart_errors("```chart\ntype: line\nx: [a, b]\nseries:\n  - { name: s, values: [1] }\nsource: x\n```"))
+    assert any("source" in e for e in chart_errors("```chart\ntype: stats\nitems:\n  - { value: 1, label: a }\n```"))

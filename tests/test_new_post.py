@@ -9,7 +9,7 @@ URL = "https://nvminhtu.github.io/app-demo/shotmatic/reports"
 
 
 def test_load_types_keeps_order(site):
-    assert list(load_types(site[0])) == ["trend", "hunt-app", "keyword", "aso", "review", "youtube"]
+    assert list(load_types(site[0])) == ["trend", "hunt-app", "keyword", "aso", "review", "youtube", "top-apps"]
 
 
 @pytest.mark.parametrize("text,expected", [
@@ -43,7 +43,7 @@ def test_create_post_writes_post_to_landing_and_image_to_appdemo(site):
     assert r["url"] == "https://shotmatic.app/reports/keyword/speaker-cleaner-app-keywords"
     fm, body = read_post(post)
     assert list(fm) == ["title", "description", "date", "type", "store", "country", "keyword", "seo_keyword", "target_keywords",
-                        "aso_keywords", "short", "image", "source", "x_caption"]
+                        "aso_keywords", "highlight", "short", "image", "source", "x_caption"]
     assert fm["seo_keyword"] == "speaker cleaner app keywords" and fm["target_keywords"] == ["aso keyword ranking"]
     assert fm["date"] == "2026-11-23" and fm["image"] == r["image_url"] and fm["x_caption"] == ""
     assert fm["short"] == "Speaker cleaner app keywords"
@@ -92,3 +92,32 @@ def test_unknown_target_rejected(site):
     with pytest.raises(ValueError, match="not in keywords/bank.csv"):
         create_post("keyword", "2026-11-23", "s", "T", "k", "src", src, landing, appdemo,
                     targets=["made up phrase"], links={})
+
+
+def test_create_from_card(site, tmp_path):
+    import json
+    from new_post import create_post, read_post
+    landing, appdemo = site
+    cj = tmp_path / "x.card.json"
+    cj.write_text(json.dumps({
+        "title": "3 period tracker apps", "subtitle": "US App Store",
+        "source": "ShotMatic Research, US App Store, measured 2026-11-25", "columns": ["installs"],
+        "apps": [{"name": n, "focus": "f", "icon": None, "installs": "1M+"} for n in ("Flo", "Clue", "Stardust")]}))
+    r = create_post("top-apps", "2026-11-25", "period-tracker-top-apps-2026", "Top period tracker apps in 2026",
+                    "period tracker", "ShotMatic Research, US App Store, measured 2026-11-25", None,
+                    landing=landing, appdemo=appdemo, links={}, store="app-store", country="US", card=cj)
+    _, body = read_post(Path(r["post"]))
+    assert "| 1 | Flo | f | 1M+ |" in body
+    assert "| WRITE: column | Column |" not in body
+    assert Path(r["image"]).exists()
+
+
+def test_add_image_numbers_extra_screenshots(site, tmp_path):
+    from new_post import add_image
+    landing, appdemo = site
+    src = make_png(tmp_path / "x.png")
+    a = add_image("keyword", "speaker-cleaner", "2026-11-25", src, "sorted by rise", appdemo=appdemo)
+    b = add_image("keyword", "speaker-cleaner", "2026-11-25", src, appdemo=appdemo)
+    assert a["image_url"].endswith("shotmatic.app-speaker-cleaner-2-2026-11-25.png")
+    assert b["image_url"].endswith("shotmatic.app-speaker-cleaner-3-2026-11-25.png")
+    assert a["markdown"].endswith('"sorted by rise")') and "WRITE:" in b["markdown"]

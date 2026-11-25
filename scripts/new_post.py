@@ -27,7 +27,11 @@ IMG_URL = "https://nvminhtu.github.io/app-demo/shotmatic/reports"
 SITE_URL = "https://shotmatic.app/reports"
 STORES = ("app-store", "google-play")
 FM_KEYS = ["title", "description", "date", "type", "store", "country", "keyword", "seo_keyword", "target_keywords", "aso_keywords",
-           "short", "image", "source", "x_caption"]
+           "highlight", "short", "image", "source", "x_caption"]
+
+PLACEHOLDER_TABLE = """| WRITE: column | Column |
+|---|---|
+| WRITE: one row for every number on the screenshot (keyword, rank, score…) | |"""
 
 BODY = """# {title}
 
@@ -35,13 +39,17 @@ BODY = """# {title}
 
 WRITE: 40–60 words about the long-tail keyword niche "{keyword}" (not about one app), with 1–2 numbers from the screenshot.
 
-![{keyword} — ShotMatic report]({image})
+![WRITE: alt text, what the screenshot shows in words (≤ 125 chars, with the niche keyword)]({image})
 
 ## The numbers in the screenshot
 
 | WRITE: column | Column |
 |---|---|
 | WRITE: one row for every number on the screenshot (keyword, rank, score…) | |
+
+## Is anyone searching for this?
+
+WRITE: 1–3 sentences on demand, each with a number + source: Google / store autocomplete position, Google Trends 12-month direction (google-trends MCP), ShotMatic demand score. Write "not measured" only for a signal you tried and could not get.
 
 ## What the data shows
 
@@ -117,9 +125,9 @@ def _unique_slug(folder: Path, slug: str) -> str:
 
 
 def create_post(type_: str, date: str, slug: str, title: str, keyword: str, source: str,
-                image_src: Path, landing: Path = LANDING, appdemo: Path = APPDEMO,
+                image_src: Path | None, landing: Path = LANDING, appdemo: Path = APPDEMO,
                 seo_keyword: str = "", targets: list[str] | None = None, links: dict[str, str] | None = None,
-                store: str = "", country: str = "") -> dict:
+                store: str = "", country: str = "", card: Path | None = None) -> dict:
     """targets: 1–3 shotmatic.app keywords from keywords/bank.csv; links: keyword → page (defaults to the bank)."""
     if type_ not in load_types(landing):
         raise ValueError(f"unknown type {type_!r}; add it to content/reports/types.json in the landing")
@@ -127,6 +135,16 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
         dt.date.fromisoformat(date)
     except ValueError as e:
         raise ValueError(f"date must be YYYY-MM-DD, got {date!r}") from e
+    table = ""
+    if card is not None:
+        from card_data import load_card
+        from card_render import render_card
+        from card_table import card_table
+        c = load_card(Path(card))
+        image_src = render_card(c, Path(card).with_suffix(".png"), Path(card).parent / ".icons")
+        table = card_table(c)
+    if image_src is None:
+        raise ValueError("--image or --card is required")
     folder = reports_dir(landing) / type_
     slug = _unique_slug(folder, slugify(slug))
     image = watermark(Path(image_src), img_dir(appdemo, type_), slug, date)
@@ -151,6 +169,8 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
         "seo_keyword": seo_keyword,
         "target_keywords": targets,
         "aso_keywords": [],
+        # Opportunity highlight on /reports: one number from the data (stat) + one founder-facing sentence (text)
+        "highlight": {"stat": "", "text": ""},
         "short": slug.replace("-", " ").capitalize(),
         "image": image_url,
         "source": source,
@@ -158,9 +178,25 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
     }
     folder.mkdir(parents=True, exist_ok=True)
     post = folder / f"{date}-{slug}.md"
-    write_post(post, fm, BODY.format(title=title, keyword=keyword, image=image_url, source=source.rstrip("."), deeper=deeper))
+    body = BODY.format(title=title, keyword=keyword, image=image_url, source=source.rstrip("."), deeper=deeper)
+    if table:
+        body = body.replace(PLACEHOLDER_TABLE, table, 1)
+    write_post(post, fm, body)
     return {"slug": slug, "post": str(post), "image": str(image), "image_url": image_url,
             "url": f"{SITE_URL}/{type_}/{slug}"}
+
+
+def add_image(type_: str, slug: str, date: str, image_src: Path, caption: str = "", appdemo: Path = APPDEMO) -> dict:
+    """Stamp one more screenshot for a report: shotmatic.app-<slug>-<n>-<date>.png (n = 2, 3, …, first free).
+    Returns the file, its public URL and the Markdown line to paste into the post (alt WRITE: + caption as title)."""
+    out = img_dir(appdemo, type_)
+    n = 2
+    while list(out.glob(f"shotmatic.app-{slug}-{n}-*")):
+        n += 1
+    image = watermark(Path(image_src), out, f"{slug}-{n}", date)
+    url = f"{IMG_URL}/{type_}/{image.name}"
+    title = f' "{caption}"' if caption else ' "WRITE: caption, what this screenshot adds"'
+    return {"image": str(image), "image_url": url, "markdown": f"![WRITE: alt text, what it shows in words]({url}{title})"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -174,14 +210,28 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--source", required=True)
     c.add_argument("--store", required=True, choices=STORES, help="store the numbers come from (site filter)")
     c.add_argument("--country", required=True, help="2-letter country of the numbers, e.g. US (site filter)")
-    c.add_argument("--image", type=Path, required=True)
+    c.add_argument("--image", type=Path, default=None)
+    c.add_argument("--card", type=Path, default=None, help="inbox/<slug>.card.json: draws the card and fills the numbers table")
     c.add_argument("--date", default=dt.date.today().isoformat())
     c.add_argument("--seo-keyword", default="", help="the search phrase this report should rank for")
     c.add_argument("--target", action="append", default=[], help="shotmatic.app keyword from keywords/bank.csv (1–3)")
+    i = sub.add_parser("image", help="stamp one more screenshot for an existing report")
+    i.add_argument("--type", required=True)
+    i.add_argument("--slug", required=True)
+    i.add_argument("--image", type=Path, required=True)
+    i.add_argument("--caption", default="")
+    i.add_argument("--date", default=dt.date.today().isoformat())
     a = ap.parse_args(argv)
+    if a.cmd == "image":
+        try:
+            print(json.dumps(add_image(a.type, a.slug, a.date, a.image, a.caption), indent=2))
+        except WatermarkError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 1
+        return 0
     try:
         r = create_post(a.type, a.date, a.slug, a.title, a.keyword, a.source, a.image,
-                        seo_keyword=a.seo_keyword, targets=a.target, store=a.store, country=a.country)
+                        seo_keyword=a.seo_keyword, targets=a.target, store=a.store, country=a.country, card=a.card)
         print(json.dumps(r, indent=2))
     except (ValueError, WatermarkError) as e:
         print(f"error: {e}", file=sys.stderr)
