@@ -27,7 +27,7 @@ IMG_URL = "https://nvminhtu.github.io/app-demo/shotmatic/reports"
 SITE_URL = "https://shotmatic.app/reports"
 STORES = ("app-store", "google-play")
 FM_KEYS = ["title", "description", "date", "type", "store", "country", "keyword", "seo_keyword", "target_keywords", "aso_keywords",
-           "short", "image", "source", "x_caption"]
+           "highlight", "short", "image", "source", "x_caption"]
 
 PLACEHOLDER_TABLE = """| WRITE: column | Column |
 |---|---|
@@ -169,6 +169,8 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
         "seo_keyword": seo_keyword,
         "target_keywords": targets,
         "aso_keywords": [],
+        # Opportunity highlight on /reports: one number from the data (stat) + one founder-facing sentence (text)
+        "highlight": {"stat": "", "text": ""},
         "short": slug.replace("-", " ").capitalize(),
         "image": image_url,
         "source": source,

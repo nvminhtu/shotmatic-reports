@@ -45,6 +45,7 @@ def _filled(site) -> Path:
                   "Pick a narrower keyword; an aso keyword ranking check shows where you stand.")
     t = t.replace("description: ''", f"description: '{DESC}'")
     t = t.replace("aso_keywords: []", "aso_keywords:\n- speaker cleaner\n- cleaner volume\n- water eject")
+    t = t.replace("  stat: ''\n  text: ''", "  stat: '#1'\n  text: 'A speaker cleaner app holds #1 for \"speaker cleaner\" but misses the top 50 for \"volume\".'")
     t = t.replace(t.split("## ASO keywords for this niche\n\n")[1].split("\n\n## ")[0], ASO_TABLE)
     t = t.replace("WRITE: one line on why this helps someone in this niche", "see every keyword rank in one place")
     post.write_text(t)
@@ -216,3 +217,16 @@ def test_updated_must_follow_date(site):
     assert check(post, *site) == []
     post.write_text(t.replace("date: '2026-11-23'", "date: '2026-11-23'\nupdated: '2026-11-01'"))
     assert any("updated must be on or after" in e for e in check(post, *site))
+
+
+def test_highlight_required(site):
+    post = _filled(site)
+    assert check_post(post, *site, bank=BANK) == []
+    post.write_text(post.read_text().replace("  stat: '#1'", "  stat: ''"))
+    assert any("highlight" in e for e in check_post(post, *site, bank=BANK))
+
+
+def test_highlight_stat_needs_a_number(site):
+    post = _filled(site)
+    post.write_text(post.read_text().replace("  stat: '#1'", "  stat: 'big'"))
+    assert any("highlight.stat" in e for e in check_post(post, *site, bank=BANK))

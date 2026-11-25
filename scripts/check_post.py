@@ -55,7 +55,7 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, ban
         return [f"cannot read frontmatter: {e}"]
 
     errors = [f"missing or empty frontmatter: {k}" for k in FM_KEYS
-              if k not in ("target_keywords", "aso_keywords") and not str(fm.get(k, "")).strip()]
+              if k not in ("target_keywords", "aso_keywords", "highlight") and not str(fm.get(k, "")).strip()]
 
     type_ = fm.get("type")
     if type_ not in load_types(landing):
@@ -95,6 +95,17 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, ban
 
     if "WRITE:" in body:
         errors.append("unfilled WRITE: placeholder left in the post")
+
+    # Opportunity highlight (shown on /reports): stat = one short number from the data, text = what it means for a founder
+    hl = fm.get("highlight") if isinstance(fm.get("highlight"), dict) else {}
+    stat, hl_text = str(hl.get("stat") or "").strip(), str(hl.get("text") or "").strip()
+    if not stat or not hl_text:
+        errors.append("highlight: set stat (one number from the data, e.g. '+3,200%', '#7', '2 of 11') and text (one sentence)")
+    else:
+        if len(stat) > 12 or not re.search(r"\d", stat):
+            errors.append(f"highlight.stat must be a short number from the data (≤ 12 chars, with a digit), got {stat!r}")
+        if not 60 <= len(hl_text) <= 220:
+            errors.append(f"highlight.text is {len(hl_text)} chars; keep 60–220")
 
     sa = short_answer(body)
     if sa is None:

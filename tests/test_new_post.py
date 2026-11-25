@@ -43,7 +43,7 @@ def test_create_post_writes_post_to_landing_and_image_to_appdemo(site):
     assert r["url"] == "https://shotmatic.app/reports/keyword/speaker-cleaner-app-keywords"
     fm, body = read_post(post)
     assert list(fm) == ["title", "description", "date", "type", "store", "country", "keyword", "seo_keyword", "target_keywords",
-                        "aso_keywords", "short", "image", "source", "x_caption"]
+                        "aso_keywords", "highlight", "short", "image", "source", "x_caption"]
     assert fm["seo_keyword"] == "speaker cleaner app keywords" and fm["target_keywords"] == ["aso keyword ranking"]
     assert fm["date"] == "2026-11-23" and fm["image"] == r["image_url"] and fm["x_caption"] == ""
     assert fm["short"] == "Speaker cleaner app keywords"
