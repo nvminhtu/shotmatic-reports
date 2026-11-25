@@ -134,6 +134,10 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, ban
     if "WRITE:" in body:
         errors.append("unfilled WRITE: placeholder left in the post")
     errors += chart_errors(body)
+    # the first ```chart must be type: stats (headline numbers): the page turns it into Key facts for AI tools
+    first = CHART_RE.search(body)
+    if not first or (yaml.safe_load(first.group(1)) or {}).get("type") != "stats":
+        errors.append("add a ```chart type: stats block (2–4 headline numbers) right after the main screenshot; it becomes the Key facts")
 
     # Opportunity highlight (shown on /reports): stat = one short number from the data, text = what it means for a founder
     hl = fm.get("highlight") if isinstance(fm.get("highlight"), dict) else {}
@@ -150,6 +154,12 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, ban
     if sa is None:
         errors.append("missing '## The short answer' section")
     else:
+        # readability + GEO: the 1–4 numbers that answer the question are **bold**, so a skimmer and an AI see them first
+        bold = re.findall(r"\*\*(.+?)\*\*", sa)
+        if not bold:
+            errors.append("short answer: make the 1–4 key numbers or phrases **bold**")
+        elif len(bold) > 5:
+            errors.append(f"short answer has {len(bold)} bold parts; keep 1–5 so they still stand out")
         n = len(sa.split())
         if not 40 <= n <= 80:
             errors.append(f"short answer is {n} words; keep it 40–80 (target 40–60)")

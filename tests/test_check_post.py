@@ -4,7 +4,7 @@ from check_post import check_post, short_answer, x_length
 from conftest import make_png
 from new_post import create_post, read_post
 
-GOOD_SHORT = ("Speaker cleaner is a crowded App Store keyword: the top 10 is almost all "
+GOOD_SHORT = ("Speaker cleaner is a **crowded** App Store keyword: the top 10 is almost all "
               "look-alike blue water icons, and the same five apps hold the first spots across "
               "speaker cleaner, cleaner volume and cleaner volume booster. A new app needs a "
               "different icon and a narrower long-tail keyword to stand out here.")
@@ -35,6 +35,8 @@ def _filled(site) -> Path:
     t = post.read_text()
     t = t.replace("x_caption: ''", "x_caption: Speaker cleaner apps look the same. https://example.com/x")
     t = t.replace(t.split("## The short answer\n\n")[1].split("\n")[0], GOOD_SHORT)
+    t = t.replace("  - { value: 'WRITE', label: 'WRITE: 2–4 headline numbers (they become the Key facts)', icon: search }\nsource: WRITE",
+                  "  - { value: '#1', label: speaker cleaner }\nsource: ShotMatic")
     t = t.replace(t.split("## The numbers in the screenshot\n\n")[1].split("\n\n")[0], TABLE)
     t = t.replace("WRITE: alt text, what the screenshot shows in words (≤ 125 chars, with the niche keyword)",
                   "ShotMatic keyword ranks for speaker cleaner apps on the US App Store")
@@ -240,3 +242,12 @@ def test_chart_blocks_checked(site):
     assert any("needs label, from, to" in e for e in chart_errors("```chart\ntype: change\nitems:\n  - { label: g }\nsource: x\n```"))
     assert any("needs 2 values" in e for e in chart_errors("```chart\ntype: line\nx: [a, b]\nseries:\n  - { name: s, values: [1] }\nsource: x\n```"))
     assert any("source" in e for e in chart_errors("```chart\ntype: stats\nitems:\n  - { value: 1, label: a }\n```"))
+
+
+def test_short_answer_needs_bold_and_stats_chart(site):
+    post = _filled(site)
+    t = post.read_text()
+    post.write_text(t.replace("**crowded**", "crowded"))
+    assert any("bold" in e for e in check_post(post, *site, bank=BANK))
+    post.write_text(t.replace("type: stats", "type: bars").replace("{ value: '#1', label: speaker cleaner }", "{ label: speaker cleaner, value: 1 }"))
+    assert any("type: stats" in e for e in check_post(post, *site, bank=BANK))

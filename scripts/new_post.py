@@ -37,9 +37,16 @@ BODY = """# {title}
 
 ## The short answer
 
-WRITE: 40–60 words about the long-tail keyword niche "{keyword}" (not about one app), with 1–2 numbers from the screenshot.
+WRITE: 40–60 words about the long-tail keyword niche "{keyword}" (not about one app), with 1–2 numbers from the screenshot; put the 1–4 key numbers in **bold**.
 
 ![WRITE: alt text, what the screenshot shows in words (≤ 125 chars, with the niche keyword)]({image})
+
+```chart
+type: stats
+items:
+  - {{ value: 'WRITE', label: 'WRITE: 2–4 headline numbers (they become the Key facts)', icon: search }}
+source: WRITE
+```
 
 ## The numbers in the screenshot
 
