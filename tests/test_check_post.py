@@ -230,3 +230,13 @@ def test_highlight_stat_needs_a_number(site):
     post = _filled(site)
     post.write_text(post.read_text().replace("  stat: '#1'", "  stat: 'big'"))
     assert any("highlight.stat" in e for e in check_post(post, *site, bank=BANK))
+
+
+def test_chart_blocks_checked(site):
+    from check_post import chart_errors
+    ok = "```chart\ntype: change\nitems:\n  - { label: g, from: 1, to: 2 }\nsource: Trends\n```"
+    assert chart_errors(ok) == []
+    assert any("type must be" in e for e in chart_errors("```chart\ntype: pie\nsource: x\n```"))
+    assert any("needs label, from, to" in e for e in chart_errors("```chart\ntype: change\nitems:\n  - { label: g }\nsource: x\n```"))
+    assert any("needs 2 values" in e for e in chart_errors("```chart\ntype: line\nx: [a, b]\nseries:\n  - { name: s, values: [1] }\nsource: x\n```"))
+    assert any("source" in e for e in chart_errors("```chart\ntype: stats\nitems:\n  - { value: 1, label: a }\n```"))

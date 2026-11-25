@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+
+import yaml
 import sys
 from pathlib import Path
 
@@ -47,6 +49,42 @@ def junk_keywords(body: str) -> list[str]:
             bad.append(cell)
     return sorted(set(bad))
 
+
+
+CHART_RE = re.compile(r"^```chart\n(.*?)^```$", re.S | re.M)
+CHART_TYPES = ("stats", "bars", "change", "line")
+
+
+def chart_errors(body: str) -> list[str]:
+    """```chart blocks (rendered by the landing's lib/report-charts.mjs): YAML must parse and have the fields of its type."""
+    errors = []
+    for n, m in enumerate(CHART_RE.finditer(body), 1):
+        try:
+            spec = yaml.safe_load(m.group(1)) or {}
+        except yaml.YAMLError as e:
+            errors.append(f"chart {n}: YAML does not parse ({str(e).splitlines()[0]})")
+            continue
+        t = spec.get("type")
+        if t not in CHART_TYPES:
+            errors.append(f"chart {n}: type must be one of {', '.join(CHART_TYPES)} (got {t!r})")
+        elif t == "line":
+            x, series = spec.get("x"), spec.get("series")
+            if not isinstance(x, list) or not isinstance(series, list) or not series:
+                errors.append(f"chart {n}: line needs x: [...] and series: [{{name, values}}]")
+            else:
+                errors += [f"chart {n}: series {s.get('name')!r} needs {len(x)} values" for s in series
+                           if not isinstance(s.get("values"), list) or len(s["values"]) != len(x)]
+        else:
+            items = spec.get("items")
+            need = {"stats": ("value", "label"), "bars": ("label", "value"), "change": ("label", "from", "to")}[t]
+            if not isinstance(items, list) or not items:
+                errors.append(f"chart {n}: {t} needs items: [...]")
+            else:
+                errors += [f"chart {n}: item {k} needs {', '.join(need)}" for k, i in enumerate(items, 1)
+                           if not isinstance(i, dict) or any(f not in i for f in need)]
+        if not spec.get("source"):
+            errors.append(f"chart {n}: add source: (where the numbers come from)")
+    return errors
 
 def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, bank: list[dict] | None = None) -> list[str]:
     try:
@@ -95,6 +133,7 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, ban
 
     if "WRITE:" in body:
         errors.append("unfilled WRITE: placeholder left in the post")
+    errors += chart_errors(body)
 
     # Opportunity highlight (shown on /reports): stat = one short number from the data, text = what it means for a founder
     hl = fm.get("highlight") if isinstance(fm.get("highlight"), dict) else {}

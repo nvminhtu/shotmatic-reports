@@ -186,6 +186,19 @@ def create_post(type_: str, date: str, slug: str, title: str, keyword: str, sour
             "url": f"{SITE_URL}/{type_}/{slug}"}
 
 
+def add_image(type_: str, slug: str, date: str, image_src: Path, caption: str = "", appdemo: Path = APPDEMO) -> dict:
+    """Stamp one more screenshot for a report: shotmatic.app-<slug>-<n>-<date>.png (n = 2, 3, …, first free).
+    Returns the file, its public URL and the Markdown line to paste into the post (alt WRITE: + caption as title)."""
+    out = img_dir(appdemo, type_)
+    n = 2
+    while list(out.glob(f"shotmatic.app-{slug}-{n}-*")):
+        n += 1
+    image = watermark(Path(image_src), out, f"{slug}-{n}", date)
+    url = f"{IMG_URL}/{type_}/{image.name}"
+    title = f' "{caption}"' if caption else ' "WRITE: caption, what this screenshot adds"'
+    return {"image": str(image), "image_url": url, "markdown": f"![WRITE: alt text, what it shows in words]({url}{title})"}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -202,7 +215,20 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--date", default=dt.date.today().isoformat())
     c.add_argument("--seo-keyword", default="", help="the search phrase this report should rank for")
     c.add_argument("--target", action="append", default=[], help="shotmatic.app keyword from keywords/bank.csv (1–3)")
+    i = sub.add_parser("image", help="stamp one more screenshot for an existing report")
+    i.add_argument("--type", required=True)
+    i.add_argument("--slug", required=True)
+    i.add_argument("--image", type=Path, required=True)
+    i.add_argument("--caption", default="")
+    i.add_argument("--date", default=dt.date.today().isoformat())
     a = ap.parse_args(argv)
+    if a.cmd == "image":
+        try:
+            print(json.dumps(add_image(a.type, a.slug, a.date, a.image, a.caption), indent=2))
+        except WatermarkError as e:
+            print(f"error: {e}", file=sys.stderr)
+            return 1
+        return 0
     try:
         r = create_post(a.type, a.date, a.slug, a.title, a.keyword, a.source, a.image,
                         seo_keyword=a.seo_keyword, targets=a.target, store=a.store, country=a.country, card=a.card)

@@ -110,3 +110,14 @@ def test_create_from_card(site, tmp_path):
     assert "| 1 | Flo | f | 1M+ |" in body
     assert "| WRITE: column | Column |" not in body
     assert Path(r["image"]).exists()
+
+
+def test_add_image_numbers_extra_screenshots(site, tmp_path):
+    from new_post import add_image
+    landing, appdemo = site
+    src = make_png(tmp_path / "x.png")
+    a = add_image("keyword", "speaker-cleaner", "2026-11-25", src, "sorted by rise", appdemo=appdemo)
+    b = add_image("keyword", "speaker-cleaner", "2026-11-25", src, appdemo=appdemo)
+    assert a["image_url"].endswith("shotmatic.app-speaker-cleaner-2-2026-11-25.png")
+    assert b["image_url"].endswith("shotmatic.app-speaker-cleaner-3-2026-11-25.png")
+    assert a["markdown"].endswith('"sorted by rise")') and "WRITE:" in b["markdown"]
