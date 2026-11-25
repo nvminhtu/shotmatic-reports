@@ -86,6 +86,26 @@ def chart_errors(body: str) -> list[str]:
             errors.append(f"chart {n}: add source: (where the numbers come from)")
     return errors
 
+ESTIMATE_RE = re.compile(r"\b(est\.|estimated?|estimate range)\b", re.I)
+VIBE_RE = re.compile(r"\b(vibe[- ]?cod\w*|solo (dev|founder|developer)|built (alone|by one person))\b", re.I)
+
+
+def money_errors(body: str) -> list[str]:
+    """Money apps (TrustMRR): every amount is verified, each app links its TrustMRR page, the sample limit is said,
+    and 'vibe coded' / 'solo' only appear next to a link (the founder's own words)."""
+    errors = []
+    if "trustmrr.com/startup/" not in body:
+        errors.append("money report: link each app's TrustMRR page (https://trustmrr.com/startup/<slug>) so readers can check the number")
+    if not re.search(r"\bsample\b", body, re.I):
+        errors.append("money report: say it is a sample (top 30 of each TrustMRR source page), not the whole market")
+    if ESTIMATE_RE.search(body):
+        errors.append("money report: only verified TrustMRR numbers — no estimates or estimate ranges")
+    for line in body.splitlines():
+        if VIBE_RE.search(line) and "](http" not in line:
+            errors.append(f"money report: 'vibe coded' / 'solo' needs the founder's own words linked on the same line: {line.strip()[:80]}")
+    return errors
+
+
 def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, bank: list[dict] | None = None) -> list[str]:
     try:
         fm, body = read_post(path)
@@ -180,6 +200,9 @@ def check_post(path: Path, landing: Path = LANDING, appdemo: Path = APPDEMO, ban
         junk = junk_keywords(body)
         if junk:
             errors.append(f"junk store keywords (1-letter fragments) — drop them and say so in 'How this was measured': {', '.join(junk)}")
+
+    if type_ == "money":
+        errors += money_errors(body)
 
     if "## How this was measured" not in body:
         errors.append("missing '## How this was measured' section")

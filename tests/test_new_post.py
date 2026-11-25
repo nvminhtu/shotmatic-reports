@@ -9,7 +9,7 @@ URL = "https://nvminhtu.github.io/app-demo/shotmatic/reports"
 
 
 def test_load_types_keeps_order(site):
-    assert list(load_types(site[0])) == ["trend", "hunt-app", "keyword", "aso", "review", "youtube", "top-apps"]
+    assert list(load_types(site[0])) == ["trend", "hunt-app", "keyword", "aso", "review", "youtube", "top-apps", "money"]
 
 
 @pytest.mark.parametrize("text,expected", [

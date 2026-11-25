@@ -20,7 +20,7 @@ REV_W = 300  # the revenue column is wider ("$12K/mo verified")
 
 
 def _col_w(c: str) -> int:
-    return REV_W if c == "revenue" else COL_W
+    return REV_W if c in ("revenue", "verified", "earned") else COL_W
 
 
 def fetch_icon(src: str | None, icon_dir: Path) -> Image.Image | None:
@@ -96,11 +96,13 @@ def render_card(card: Card, out: Path, icon_dir: Path) -> Path:
             d.text((text_x, mid + 6), _fit(d, app.focus, f_focus, text_w), font=f_focus, fill=MUTED, anchor="lt")
         for c, x in col_x.items():
             v = app.values.get(c)
-            color = ORANGE if c == "revenue" and v else (NAVY if v else MUTED)
+            color = ORANGE if c in ("revenue", "verified") and v else (NAVY if v else MUTED)
             d.text((x, mid), v or "—", font=f_num, fill=color, anchor="rm")
         d.line((PAD, y + ROW_H - 1, WIDTH - PAD, y + ROW_H - 1), fill=LINE, width=1)
 
     note = card.source + (" · Revenue = ShotMatic estimate range, not real numbers" if card.revenue_note else "")
+    if card.verified_note:
+        note = card.source
     d.text((PAD, h - FOOT_H / 2), _fit(d, note, f_head, WIDTH - 2 * PAD), font=f_head, fill=MUTED, anchor="lm")
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)

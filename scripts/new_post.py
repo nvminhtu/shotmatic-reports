@@ -25,7 +25,7 @@ LANDING = Path(os.environ.get("REPORTS_LANDING",
 APPDEMO = Path(os.environ.get("REPORTS_APPDEMO", "/Users/tucarmd/DATA/PROJECTS/OTHERS/app-demo"))
 IMG_URL = "https://nvminhtu.github.io/app-demo/shotmatic/reports"
 SITE_URL = "https://shotmatic.app/reports"
-STORES = ("app-store", "google-play")
+STORES = ("app-store", "google-play", "both")  # both = Money apps (TrustMRR, any store)
 FM_KEYS = ["title", "description", "date", "type", "store", "country", "keyword", "seo_keyword", "target_keywords", "aso_keywords",
            "highlight", "short", "image", "source", "x_caption"]
 
